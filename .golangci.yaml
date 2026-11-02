@@ -1,0 +1,418 @@
+version: "2"
+
+run:
+  tests: true
+
+linters:
+  default: none
+
+  enable:
+    # Baseline correctness.
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+    # Resource lifecycle.
+    - bodyclose
+    - sqlclosecheck
+    - rowserrcheck
+
+    # Error and context correctness.
+    - errorlint
+    - nilerr
+    - nilnesserr
+    - contextcheck
+    - noctx
+
+    # Silent footguns.
+    - asasalint
+    - bidichk
+    - durationcheck
+    - makezero
+    - reassign
+    - fatcontext
+    - containedctx
+    - musttag
+
+    # API and protobuf correctness.
+    - protogetter
+    - canonicalheader
+    - nosprintfhostport
+
+    # Security.
+    - gosec
+
+    # Mechanical correctness and cleanup.
+    - unconvert
+    - wastedassign
+    - copyloopvar
+    - gocritic
+    - modernize
+    - intrange
+    - exptostd
+    - usestdlibvars
+    - godot
+    - perfsprint
+    - mirror
+    - unparam
+    - predeclared
+    - errname
+    - dupword
+    - misspell
+    - goconst
+    - prealloc
+    - gocheckcompilerdirectives
+    - asciicheck
+
+    # Layout and ordering.
+    - whitespace
+    - tagalign
+    - funcorder
+    - embeddedstructfieldcheck
+
+    # Deliberate project policy.
+    - depguard
+    - exhaustruct_v5
+    - forbidigo
+    - nilnil
+    - forcetypeassert
+    - exhaustive
+
+    # Agent containment.
+    - nolintlint
+    - loggercheck
+    - sloglint
+
+    # Test hygiene.
+    - usetesting
+    - thelper
+    - tparallel
+    - testifylint
+
+    # Code quality.
+    - gocognit
+    - cyclop
+    - maintidx
+    - lll
+
+    # Custom.
+    - nilaway
+
+  settings:
+    # Package boundaries. Each rule encodes a design decision; relax one only
+    # by changing the decision, not to make a diff pass.
+    depguard:
+      rules:
+        api-core:
+          files: ["**/api/*.go"]
+          deny:
+            - pkg: connectrpc.com
+              desc: api is the transport-agnostic RPC/Scope contract
+            - pkg: go.uber.org/fx
+              desc: api is DI-agnostic; fx wiring lives in module files
+            - pkg: github.com/jackc
+              desc: api is DB-agnostic; DB scopes live in db
+            - pkg: github.com/go-chi
+              desc: api is transport-agnostic
+            - pkg: github.com/arunanshub/winderclub-go/auth
+              desc: api is auth-agnostic; Access() returns a plain api.Check
+            - pkg: github.com/arunanshub/winderclub-go/db
+              desc: api is DB-agnostic
+            - pkg: github.com/arunanshub/winderclub-go/gen
+              desc: api knows no service definitions
+            - pkg: github.com/go-jet
+              desc: api is DB-agnostic
+        db:
+          files: ["**/db/**"]
+          deny:
+            - pkg: connectrpc.com
+              desc: the DB scope knows nothing about transport
+            - pkg: github.com/go-chi
+              desc: the DB scope knows nothing about transport
+            - pkg: github.com/arunanshub/winderclub-go/auth
+              desc: the DB scope knows nothing about callers
+            - pkg: github.com/arunanshub/winderclub-go/rpc
+              desc: db must not depend on its callers
+            - pkg: github.com/arunanshub/winderclub-go/services
+              desc: db must not depend on its callers
+        auth:
+          files: ["**/auth/**"]
+          deny:
+            - pkg: github.com/jackc
+              desc: authn is mechanism-agnostic; storage-backed authz is a separate decision
+            - pkg: github.com/arunanshub/winderclub-go/db
+              desc: authn is mechanism-agnostic; storage-backed authz is a separate decision
+            - pkg: github.com/arunanshub/winderclub-go/rpc
+              desc: auth must not depend on its callers
+            - pkg: github.com/arunanshub/winderclub-go/services
+              desc: auth must not depend on its callers
+        rpc:
+          files: ["**/rpc/**"]
+          deny:
+            - pkg: github.com/jackc/pgx/v5/pgxpool
+              desc: RPCs never touch the pool; list the db scope in Scopes() and use db.Q(ctx)
+            - pkg: net/http
+              desc: RPCs are transport-agnostic; return connect errors for status codes
+            - pkg: github.com/go-chi
+              desc: RPCs are transport-agnostic
+            - pkg: github.com/arunanshub/winderclub-go/api/server
+              desc: RPCs don't know about wiring; fx does it
+            - pkg: github.com/arunanshub/winderclub-go/api/connect
+              desc: RPCs don't know about wiring; fx does it
+            - pkg: github.com/arunanshub/winderclub-go/api/interceptors
+              desc: RPCs don't know about the interceptor chain
+            - pkg: github.com/arunanshub/winderclub-go/services
+              desc: RPCs don't know about wiring; fx does it
+        services:
+          files: ["**/services/**"]
+          deny:
+            - pkg: github.com/jackc
+              desc: services are thin adapters; data access belongs in RPC scopes
+            - pkg: github.com/arunanshub/winderclub-go/db
+              desc: services are thin adapters; data access belongs in RPC scopes
+            - pkg: github.com/go-jet
+              desc: services are thin adapters; queries are built in RPCs
+            - pkg: github.com/arunanshub/winderclub-go/auth
+              desc: access policy lives in each RPC's Access(), not a second system here
+            - pkg: github.com/arunanshub/winderclub-go/rpc
+              desc: fx wires RPCs into services; packages don't import each other
+        # ADR 0002: RPCs and activities never see Temporal; workflow bodies
+        # (workflows.go) use only its workflow package.
+        temporal:
+          files: ["$all", "!**/pkg/durable/**", "!**/workflows.go"]
+          deny:
+            - pkg: go.temporal.io
+              desc: Temporal is behind pkg/durable; only workflow bodies (workflows.go) use the SDK
+        # pkg/keyset wraps Tink, so key handling (formats, rotation, redaction)
+        # lives in one place.
+        tink:
+          files: ["$all", "!**/pkg/keyset/**"]
+          deny:
+            - pkg: github.com/tink-crypto
+              desc: keys and encryption go through pkg/keyset
+        temporal-in-workflows:
+          files: ["**/workflows.go"]
+          list-mode: lax
+          allow: [go.temporal.io/sdk/workflow]
+          deny:
+            - pkg: go.temporal.io
+              desc: workflow bodies use only go.temporal.io/sdk/workflow; the rest is pkg/durable's
+            # workflowcheck misses math/rand/v2; deny every random source here.
+            - pkg: math/rand$
+              desc: not replay-safe; derive IDs with durable.UUID, or use workflow.SideEffect
+            - pkg: math/rand/v2
+              desc: not replay-safe; derive IDs with durable.UUID, or use workflow.SideEffect
+            - pkg: crypto/rand
+              desc: not replay-safe; derive IDs with durable.UUID, or use workflow.SideEffect
+        pkg:
+          files: ["**/pkg/**"]
+          deny:
+            - pkg: github.com/arunanshub/winderclub-go/rpc
+              desc: pkg/ holds reusable building blocks; app code comes in through hooks they own
+            - pkg: github.com/arunanshub/winderclub-go/services
+              desc: pkg/ holds reusable building blocks; app code comes in through hooks they own
+            - pkg: github.com/arunanshub/winderclub-go/cmd
+              desc: pkg/ holds reusable building blocks; app code comes in through hooks they own
+            - pkg: github.com/arunanshub/winderclub-go/gen
+              desc: pkg/ holds reusable building blocks; app code comes in through hooks they own
+        migrations:
+          files: ["$all", "!**/db/migrate.go"]
+          deny:
+            - pkg: github.com/pressly/goose
+              desc: migrations run only through db.Migrator, in the migrate command
+        no-magic:
+          files: ["$all", "!**/api/types.go", "!$test"]
+          deny:
+            - pkg: reflect
+              desc: no reflection magic; api.Wrap (nil checks, held-scope walk) is the one sanctioned use
+        config-in-cmd:
+          files: ["$all", "!**/cmd/**"]
+          deny:
+            - pkg: github.com/alecthomas/kong
+              desc: config enters only in cmd (12-factor)
+        logging:
+          files: ["$all"]
+          deny:
+            - pkg: log$
+              desc: use log/slog
+            - pkg: github.com/sirupsen/logrus
+              desc: use log/slog
+            - pkg: go.uber.org/zap
+              desc: use log/slog
+        log-handler:
+          files: ["$all", "!**/logging/**"]
+          deny:
+            - pkg: github.com/lmittmann/tint
+              desc: logging.New owns the handler choice
+        otel-sdk:
+          files: ["$all", "!**/telemetry/**"]
+          deny:
+            - pkg: go.opentelemetry.io/otel/sdk
+              desc: only telemetry builds providers; use the otel API and globals
+            - pkg: go.opentelemetry.io/contrib/exporters
+              desc: only telemetry builds providers; use the otel API and globals
+        access-log:
+          files: ["$all", "!**/api/server/**"]
+          deny:
+            - pkg: github.com/go-chi/httplog
+              desc: the access log is api/server's router middleware
+        db-driver:
+          files: ["$all", "!**/db/**"]
+          deny:
+            - pkg: github.com/go-jet/jet/v2/qrm
+              desc: jet statements run through db.Query, which names the query's span
+            - pkg: github.com/jackc/pgx/v5/stdlib
+              desc: the database/sql handle is db's (NewSQLDB); RPCs use the db scope
+
+    # Patterns match the type being built, not the file building it.
+    # RPC and service deps are set once, in the constructor fx calls. nilaway
+    # can't follow them (RPCs are called through the api.RPC interface,
+    # services through connect's generated handlers), so require every field
+    # in their struct literals instead. jet models too: MODEL() writes every
+    # listed column, so a forgotten field inserts its zero value, not the
+    # column's DEFAULT (exclude those columns from the INSERT's list).
+    exhaustruct_v5:
+      explicit-mode: true # check only the patterns below
+      enforce-patterns:
+        - ^github\.com/arunanshub/winderclub-go/rpc/.+
+        - ^github\.com/arunanshub/winderclub-go/services\..+
+        - ^github\.com/arunanshub/winderclub-go/db/jet/model\..+
+
+    forbidigo:
+      # Match by what an identifier resolves to, whatever name a package is imported under.
+      analyze-types: true
+      forbid:
+        - pattern: ^postgres\.(Raw\w*|\w+Column|CustomExpression|Token)$
+          pkg: ^github\.com/go-jet/jet/v2/postgres$
+          msg: use generated columns from db/jet/table, or a sqlc query, not raw SQL or hand-named columns
+        - pattern: ^postgres\.\w+Exp$
+          pkg: ^github\.com/go-jet/jet/v2/postgres$
+          msg: jet's type-cast wrappers write into shared table columns, a data race (go-jet/jet#622); use CAST
+        - pattern: ^(fmt\.Print(|f|ln)|print|println)$
+          msg: log through slog
+        - pattern: ^os\.(Getenv|LookupEnv|Environ)$
+          msg: config comes only from kong flags/env in cmd
+        - pattern: ^http\.(ListenAndServe|ListenAndServeTLS|Serve|ServeTLS)$
+          msg: serve only via api/server's http.Server, which sets timeouts
+        - pattern: ^slog\.(Default|SetDefault|Debug|Info|Warn|Error|Log|LogAttrs)(Context)?$
+          msg: take an injected *slog.Logger; only cmd touches the slog default
+
+    custom:
+      nilaway:
+        type: module
+        description: Static analysis tool to detect potential nil panics in Go code.
+        settings:
+          include-pkgs: "github.com/arunanshub/winderclub-go"
+          exclude-pkgs: ""
+          experimental-struct-init: "true"
+
+    maintidx:
+      under: 40
+    gocognit:
+      min-complexity: 20
+    cyclop:
+      max-complexity: 15
+      package-average: 0
+
+    # nestif:
+    #   min-complexity: 5
+    # funlen:
+    #   lines: -1
+    #   statements: 60
+    #   ignore-comments: true
+
+    staticcheck:
+      # jet's idiom: generated tables read like SQL (Offers.SELECT(Offers.ID).WHERE(…)).
+      dot-import-whitelist:
+        - github.com/arunanshub/winderclub-go/db/jet/table
+
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+
+    gosec:
+      excludes:
+        - G104
+
+    goconst:
+      ignore-tests: true
+
+    exhaustive:
+      default-signifies-exhaustive: true
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+      disabled-checks:
+        - ifElseChain
+        - singleCaseSwitch
+      settings:
+        rangeValCopy:
+          sizeThreshold: 512
+
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+      allow-unused: false
+
+    sloglint:
+      # One call style everywhere: slog.String(...) attrs, and the
+      # *Context variants whenever a ctx is in scope.
+      attr-only: true
+      context: scope
+
+    lll:
+      line-length: 120
+
+  exclusions:
+    presets:
+      - common-false-positives
+      - std-error-handling
+
+    rules:
+      - path: _test\.go
+        linters:
+          - gosec
+          - contextcheck
+          - maintidx
+
+      # Config is read in cmd; tests (and durabletest, their helper) take
+      # their server URLs from the environment.
+      - path: (_test\.go|cmd/|pkg/durable/durabletest/)
+        linters:
+          - forbidigo
+        text: os\.(Getenv|LookupEnv|Environ)
+
+      # cmd builds the logger and installs it as the default.
+      - path: cmd/
+        linters:
+          - forbidigo
+        text: slog\.
+
+      # Struct-tag lines (kong CLI help text) cannot wrap.
+      - linters:
+          - lll
+        source: "`.+`$"
+
+formatters:
+  enable:
+    - gofumpt
+    - gci
+    - golines
+
+  settings:
+    golines:
+      # Auto-wrap long lines to the lll limit. Measured to clear ~897 of the
+      # lll hits repo-wide; the rest are struct tags, strings and comments it
+      # cannot wrap, and those get wrapped or excluded by hand.
+      max-len: 120
+      # tagalign owns struct-tag alignment. Keep golines from undoing its fix.
+      reformat-tags: false
+    gci:
+      sections:
+        - standard
+        - default
+        - localmodule
