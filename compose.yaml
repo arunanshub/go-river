@@ -1,0 +1,56 @@
+# Local dev stack. The app connects through pgbouncer (transaction mode), as in
+# production; postgres:5432 is the direct connection, for migrations and psql.
+services:
+  postgres:
+    image: postgres:18.6-alpine
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    environment:
+      POSTGRES_USER: winderclub
+      POSTGRES_PASSWORD: winderclub
+      POSTGRES_DB: winderclub
+    ports: ["5432:5432"]
+    # Docker's default seccomp profile blocks io_uring (io_method = io_uring).
+    security_opt: [seccomp=unconfined]
+    shm_size: 1g # parallel queries use /dev/shm; Docker's default 64MB is too small
+    volumes:
+      - ./deploy/local/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - pgdata:/var/lib/postgresql # PG 18+ images keep data in a versioned subdir
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "winderclub", "-d", "winderclub"]
+      interval: 2s
+      retries: 15
+
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.26.1-p0
+    # Settings live in the ini; these only make the entrypoint write
+    # userlist.txt (a plaintext password, as scram-sha-256 needs).
+    environment:
+      DB_USER: winderclub
+      DB_PASSWORD: winderclub
+      AUTH_TYPE: scram-sha-256
+    ports: ["6432:5432"]
+    volumes:
+      - ./deploy/local/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # DB browser at http://localhost:8081 (login admin/admin). Only a :latest tag
+  # is published, so it's pinned by digest.
+  pg-view:
+    image: lcurrol/pg-view:latest@sha256:55f9f0bcd31287e5da26750ae0dfed2706cfadf9a0b53a0aa423655f9472dd43
+    environment:
+      PGVIEW_USERNAME: admin
+      PGVIEW_PASSWORD: admin
+      PGVIEW_SESSION_SECRET: local-dev-only
+      DB_URL: postgresql://winderclub:winderclub@postgres:5432/winderclub
+    ports: ["8081:3000"]
+    volumes:
+      - pgview:/app/.data # saved connections and SQL history
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  pgview:
