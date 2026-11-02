@@ -5,9 +5,9 @@ services:
     image: postgres:18.6-alpine
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
     environment:
-      POSTGRES_USER: winderclub
-      POSTGRES_PASSWORD: winderclub
-      POSTGRES_DB: winderclub
+      POSTGRES_USER: goriver
+      POSTGRES_PASSWORD: goriver
+      POSTGRES_DB: goriver
     ports: ["5432:5432"]
     # Docker's default seccomp profile blocks io_uring (io_method = io_uring).
     security_opt: [seccomp=unconfined]
@@ -43,7 +43,7 @@ services:
       PGVIEW_USERNAME: admin
       PGVIEW_PASSWORD: admin
       PGVIEW_SESSION_SECRET: local-dev-only
-      DB_URL: postgresql://winderclub:winderclub@postgres:5432/winderclub
+      DB_URL: postgresql://goriver:goriver@postgres:5432/goriver
     ports: ["8081:3000"]
     volumes:
       - pgview:/app/.data # saved connections and SQL history
