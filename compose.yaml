@@ -16,7 +16,7 @@ services:
       - ./deploy/local/postgresql.conf:/etc/postgresql/postgresql.conf:ro
       - pgdata:/var/lib/postgresql # PG 18+ images keep data in a versioned subdir
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "winderclub", "-d", "winderclub"]
+      test: ["CMD", "pg_isready", "-U", "goriver", "-d", "goriver"]
       interval: 2s
       retries: 15
 
@@ -25,8 +25,8 @@ services:
     # Settings live in the ini; these only make the entrypoint write
     # userlist.txt (a plaintext password, as scram-sha-256 needs).
     environment:
-      DB_USER: winderclub
-      DB_PASSWORD: winderclub
+      DB_USER: goriver
+      DB_PASSWORD: goriver
       AUTH_TYPE: scram-sha-256
     ports: ["6432:5432"]
     volumes:
@@ -47,6 +47,15 @@ services:
     ports: ["8081:3000"]
     volumes:
       - pgview:/app/.data # saved connections and SQL history
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  river-ui:
+    image: ghcr.io/riverqueue/riverui:latest
+    environment:
+      DATABASE_URL: postgres://goriver:goriver@postgres:5432/goriver
+    ports: ["8080:8080"]
     depends_on:
       postgres:
         condition: service_healthy
