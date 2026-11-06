@@ -8,7 +8,7 @@ import (
 	"go.uber.org/fx"
 )
 
-var ClientModule = fx.Module("jobs.client")
+var ClientModule = fx.Module("jobs.client", fx.Provide(NewWorkerClient))
 
 // An insert only client good for use with callers.
 func NewWorkerClient(pool *pgxpool.Pool) (*river.Client[pgx.Tx], error) {

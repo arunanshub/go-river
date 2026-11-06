@@ -30,7 +30,9 @@ var Module = fx.Module("jobs",
 func StartClient(lc fx.Lifecycle, client jobClient) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			return client.client.Start(ctx)
+			// river runs for the lifetime of ctx, but fx cancels OnStart's ctx once
+			// startup finishes (and it carries the 15s start timeout), so detach it
+			return client.client.Start(context.WithoutCancel(ctx))
 		},
 		OnStop: func(ctx context.Context) error {
 			return client.client.Stop(ctx)
@@ -93,9 +95,18 @@ func addWorkersToRegistry(params AddWorkersParams) error {
 type SortArgs struct {
 	// Strings is a slice of strings to sort.
 	Strings []string `json:"strings"`
+
+	// added new arg
+	WaitTime int `json:"wait_time"`
 }
 
 func (SortArgs) Kind() string { return "sort" }
+
+// route sort jobs to the queue the worker listens on, regardless of which
+// client inserts them
+func (SortArgs) InsertOpts() river.InsertOpts {
+	return river.InsertOpts{Queue: string(Slow)}
+}
 
 // ----------------------------- the actual worker ----------------------------
 type SortWorker struct {
@@ -106,7 +117,7 @@ type SortWorker struct {
 
 func (w *SortWorker) Work(ctx context.Context, job *river.Job[SortArgs]) error {
 	sort.Strings(job.Args.Strings)
-	time.Sleep(10 * time.Second)
+	time.Sleep(time.Duration(job.Args.WaitTime) * time.Second)
 	fmt.Printf("Sorted strings: %+v\n", job.Args.Strings)
 	return nil
 }
