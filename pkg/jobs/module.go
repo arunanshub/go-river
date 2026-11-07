@@ -78,8 +78,8 @@ type RegistrableWorker struct {
 	Registration WorkerRegistration `group:"workers"`
 }
 
-// Wraps worker as a WorkerResult. T is inferred from worker's Work method, so
-// callers never restate the args type.
+// Wraps worker as a [RegistrableWorker]. T is inferred from worker's Work
+// method, so callers never restate the args type.
 func AsWorker[T river.JobArgs](worker river.Worker[T]) RegistrableWorker {
 	return RegistrableWorker{Registration: func(registry *river.Workers) error {
 		return river.AddWorkerSafely(registry, worker)
