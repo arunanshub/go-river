@@ -7,6 +7,7 @@ import (
 
 	"github.com/arunanshub/go-river/pkg/database"
 	"github.com/arunanshub/go-river/pkg/jobs"
+	"github.com/arunanshub/go-river/pkg/workers"
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
 	"go.uber.org/fx"
@@ -20,7 +21,7 @@ func main() {
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
 
-			row, err := c.Insert(ctx, jobs.SortArgs{
+			row, err := c.Insert(ctx, workers.SortArgs{
 				Strings:  []string{"fefe", "fofo"},
 				WaitTime: 2,
 			}, nil)

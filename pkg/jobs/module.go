@@ -3,8 +3,6 @@ package jobs
 import (
 	"context"
 	"fmt"
-	"sort"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -21,10 +19,9 @@ const (
 )
 
 var Module = fx.Module("jobs",
-	fx.Provide(NewJobClient),
-	fx.Provide(newWorkersRegistry, NewSortWorker, fx.Private),
-	fx.Invoke(StartClient),
-	fx.Invoke(addWorkersToRegistry),
+	fx.Provide(NewJobClient, NewWorkersRegistry),
+	// fx.Invoke(StartClient),
+	// fx.Invoke(addWorkersToRegistry),
 )
 
 func StartClient(lc fx.Lifecycle, client jobClient) {
@@ -69,59 +66,25 @@ type jobClient struct {
 	client *river.Client[pgx.Tx]
 }
 
-// -------------------- this is where the workers get registered -----------------
-func newWorkersRegistry() *river.Workers {
-	return river.NewWorkers()
-}
+// A function that adds a worker to the registry. Workers are contributed to the
+// "workers" value group as these closures since each river.Worker[T] is a
+// distinct type.
+type WorkerRegistration func(*river.Workers) error
 
-type AddWorkersParams struct {
+type registryParams struct {
 	fx.In
 
-	Registry *river.Workers
-
-	// just one worker type. There can be many. The point is, registry only ever sees
-	// the interface
-	SortWorker river.Worker[SortArgs]
+	Registrations []WorkerRegistration `group:"workers"`
 }
 
-func addWorkersToRegistry(params AddWorkersParams) error {
-	registry := params.Registry
-
-	err := river.AddWorkerSafely(registry, params.SortWorker)
-	return err
-}
-
-// ----------------------------- a worker's args -----------------------------
-type SortArgs struct {
-	// Strings is a slice of strings to sort.
-	Strings []string `json:"strings"`
-
-	// added new arg
-	WaitTime int `json:"wait_time"`
-}
-
-func (SortArgs) Kind() string { return "sort" }
-
-// route sort jobs to the queue the worker listens on, regardless of which
-// client inserts them
-func (SortArgs) InsertOpts() river.InsertOpts {
-	return river.InsertOpts{Queue: string(Slow)}
-}
-
-// ----------------------------- the actual worker ----------------------------
-type SortWorker struct {
-	// An embedded WorkerDefaults sets up default methods to fulfill the rest of
-	// the Worker interface:
-	river.WorkerDefaults[SortArgs]
-}
-
-func (w *SortWorker) Work(ctx context.Context, job *river.Job[SortArgs]) error {
-	sort.Strings(job.Args.Strings)
-	time.Sleep(time.Duration(job.Args.WaitTime) * time.Second)
-	fmt.Printf("Sorted strings: %+v\n", job.Args.Strings)
-	return nil
-}
-
-func NewSortWorker() river.Worker[SortArgs] {
-	return &SortWorker{}
+// Depending on the "workers" group forces every worker in it to be constructed
+// and registered before the client that depends on this registry is built.
+func NewWorkersRegistry(params registryParams) (*river.Workers, error) {
+	registry := river.NewWorkers()
+	for _, register := range params.Registrations {
+		if err := register(registry); err != nil {
+			return nil, err
+		}
+	}
+	return registry, nil
 }
