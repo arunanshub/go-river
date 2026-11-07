@@ -23,7 +23,7 @@ func main() {
 
 			row, err := c.Insert(ctx, workers.SortArgs{
 				Strings:  []string{"fefe", "fofo"},
-				WaitTime: 2,
+				WaitTime: 5 * time.Second,
 			}, nil)
 			if err != nil {
 				return err

@@ -15,7 +15,7 @@ type SortArgs struct {
 	Strings []string `json:"strings"`
 
 	// added new arg
-	WaitTime int `json:"wait_time"`
+	WaitTime time.Duration
 }
 
 func (SortArgs) Kind() string { return "sort" }
@@ -34,7 +34,7 @@ type SortWorker struct {
 
 func (w *SortWorker) Work(ctx context.Context, job *river.Job[SortArgs]) error {
 	sort.Strings(job.Args.Strings)
-	time.Sleep(time.Duration(job.Args.WaitTime) * time.Second)
+	time.Sleep(job.Args.WaitTime)
 	fmt.Printf("Sorted strings: %+v\n", job.Args.Strings)
 	return nil
 }
@@ -50,6 +50,6 @@ var _ river.Worker[SortArgs] = (*SortWorker)(nil)
 // 	return worker, nil
 // }
 
-func NewSortWorker() river.Worker[SortArgs] {
-	return &SortWorker{}
+func NewSortWorker() jobs.WorkerResult {
+	return jobs.AsWorker(&SortWorker{})
 }
