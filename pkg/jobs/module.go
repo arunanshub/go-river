@@ -71,9 +71,8 @@ type jobClient struct {
 // distinct type.
 type WorkerRegistration func(*river.Workers) error
 
-// Returned by worker constructors to contribute the worker to the "workers"
-// value group without needing fx.Annotate.
-type WorkerResult struct {
+// Represents a worker that can be registered with [NewWorkersRegistry].
+type RegistrableWorker struct {
 	fx.Out
 
 	Registration WorkerRegistration `group:"workers"`
@@ -81,8 +80,8 @@ type WorkerResult struct {
 
 // Wraps worker as a WorkerResult. T is inferred from worker's Work method, so
 // callers never restate the args type.
-func AsWorker[T river.JobArgs](worker river.Worker[T]) WorkerResult {
-	return WorkerResult{Registration: func(registry *river.Workers) error {
+func AsWorker[T river.JobArgs](worker river.Worker[T]) RegistrableWorker {
+	return RegistrableWorker{Registration: func(registry *river.Workers) error {
 		return river.AddWorkerSafely(registry, worker)
 	}}
 }

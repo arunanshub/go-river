@@ -50,6 +50,6 @@ var _ river.Worker[SortArgs] = (*SortWorker)(nil)
 // 	return worker, nil
 // }
 
-func NewSortWorker() jobs.WorkerResult {
+func NewSortWorker() jobs.RegistrableWorker {
 	return jobs.AsWorker(&SortWorker{})
 }
