@@ -91,9 +91,11 @@ type RegistrableWorker struct {
 // Wraps worker as a [RegistrableWorker]. T is inferred from worker's Work
 // method, so callers never restate the args type.
 func AsWorker[T river.JobArgs](worker river.Worker[T]) RegistrableWorker {
-	return RegistrableWorker{Registration: func(registry *river.Workers) error {
-		return river.AddWorkerSafely(registry, worker)
-	}}
+	return RegistrableWorker{
+		Registration: func(registry *river.Workers) error {
+			return river.AddWorkerSafely(registry, worker)
+		},
+	}
 }
 
 type registryParams struct {

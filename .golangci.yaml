@@ -196,8 +196,9 @@ linters:
 formatters:
   enable:
     - gofumpt
-    - gci
     - golines
+    - gci
+    - goimports
 
   settings:
     golines:
