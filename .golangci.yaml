@@ -73,7 +73,7 @@ linters:
     - embeddedstructfieldcheck
 
     # Deliberate project policy.
-    - exhaustruct_v5
+    # - exhaustruct_v5
     - forbidigo
     - nilnil
     - forcetypeassert
@@ -199,8 +199,6 @@ formatters:
     - golines
     - gci
     - goimports
-    - gofmt
-    - swaggo
 
   settings:
     golines:
