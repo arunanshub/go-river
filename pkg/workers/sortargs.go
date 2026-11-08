@@ -6,8 +6,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/arunanshub/go-river/pkg/jobs"
 	"github.com/riverqueue/river"
+
+	"github.com/arunanshub/go-river/pkg/jobs"
 )
 
 type SortArgs struct {
@@ -40,15 +41,6 @@ func (w *SortWorker) Work(ctx context.Context, job *river.Job[SortArgs]) error {
 }
 
 var _ river.Worker[SortArgs] = (*SortWorker)(nil)
-
-// func NewSortWorker(registry *river.Workers) (river.Worker[SortArgs], error) {
-// 	worker := &SortWorker{}
-// 	err := river.AddWorkerSafely(registry, worker)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return worker, nil
-// }
 
 func NewSortWorker() jobs.RegistrableWorker {
 	return jobs.AsWorker(&SortWorker{})

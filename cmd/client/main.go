@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/arunanshub/go-river/pkg/database"
-	"github.com/arunanshub/go-river/pkg/jobs"
-	"github.com/arunanshub/go-river/pkg/workers"
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
 	"go.uber.org/fx"
+
+	"github.com/arunanshub/go-river/pkg/database"
+	"github.com/arunanshub/go-river/pkg/jobs"
+	"github.com/arunanshub/go-river/pkg/workers"
 )
 
 func main() {

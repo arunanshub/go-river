@@ -11,6 +11,16 @@ import (
 	"go.uber.org/fx"
 )
 
+type Queue struct {
+	name   string
+	config river.QueueConfig
+}
+
+var (
+	Slows = Queue{"slow", river.QueueConfig{MaxWorkers: 30}}
+	Fasts = Queue{"fast", river.QueueConfig{MaxWorkers: 100}}
+)
+
 type QueueType string
 
 const (
