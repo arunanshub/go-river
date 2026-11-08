@@ -15,9 +15,10 @@ import (
 
 type clientCmd struct{}
 
-func (c clientCmd) Run() error {
+func (c clientCmd) Run(common sharedFlags) error {
 	app := fx.New(
 		workers.Module, jobs.Module, database.Module,
+		fx.Supply(database.DatabasePoolConfig{DatabaseURL: common.databaseURL}),
 		fx.Invoke(insertJob),
 	)
 

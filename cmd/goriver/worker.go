@@ -1,9 +1,6 @@
 package main
 
 import (
-	"context"
-	"errors"
-
 	"go.uber.org/fx"
 
 	"github.com/arunanshub/go-river/pkg/database"
@@ -13,8 +10,9 @@ import (
 
 type workerCmd struct{}
 
-func (w workerCmd) Run() error {
+func (w workerCmd) Run(common sharedFlags) error {
 	app := fx.New(workers.Module, jobs.Module, database.Module,
+		fx.Supply(database.DatabasePoolConfig{DatabaseURL: common.databaseURL}),
 		fx.Invoke(jobs.StartClient),
 	)
 
@@ -22,18 +20,4 @@ func (w workerCmd) Run() error {
 		<-app.Wait()
 		return nil
 	})
-}
-
-func runApp(app *fx.App, callbackFn func() error) error {
-	ctx, cancel := context.WithTimeout(context.Background(), app.StartTimeout())
-	defer cancel()
-	if err := app.Start(ctx); err != nil {
-		return err
-	}
-
-	callbackErr := callbackFn()
-
-	stopCtx, cancel := context.WithTimeout(context.Background(), app.StopTimeout())
-	defer cancel()
-	return errors.Join(callbackErr, app.Stop(stopCtx))
 }

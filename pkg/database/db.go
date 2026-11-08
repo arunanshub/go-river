@@ -11,7 +11,11 @@ import (
 
 var Module = fx.Module("database", fx.Provide(NewDatabasePool))
 
-func NewDatabasePool(lc fx.Lifecycle) (*pgxpool.Pool, error) {
+type DatabasePoolConfig struct {
+	DatabaseURL string
+}
+
+func NewDatabasePool(lc fx.Lifecycle, params DatabasePoolConfig) (*pgxpool.Pool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	dbPool, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
 
