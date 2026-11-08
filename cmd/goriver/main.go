@@ -15,8 +15,8 @@ func main() {
 }
 
 type cli struct {
-	Client clientCmd `help:"run the client" cmd:""`
-	Worker workerCmd `help:"run the worker" cmd:""`
+	Client clientCmd `cmd:"" help:"run the client"`
+	Worker workerCmd `cmd:"" help:"run the worker"`
 }
 
 // func (c *cli) Run() error {
