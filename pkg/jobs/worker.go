@@ -35,7 +35,7 @@ type registrableWorker struct {
 // process.
 type workerConstructor[A river.JobArgs, W river.Worker[A], P any] func(P) (W, error)
 
-// TODO: change the name.
+// Given a queue and a worker's constructor, AsWorkerModule turns it into an fx module.
 func AsWorkerModule[A river.JobArgs, W river.Worker[A], P any](
 	queue Queue,
 	workerCtor workerConstructor[A, W, P],

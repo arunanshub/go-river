@@ -6,3 +6,4 @@ go = "1.27.3"
 [settings]
 lockfile = true
 lockfile_auto_prune = true
+minimum_release_age_excludes = ["go:github.com/riverqueue/river/cmd/river", "go"]
