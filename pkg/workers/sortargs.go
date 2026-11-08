@@ -22,7 +22,7 @@ type SortArgs struct {
 func (SortArgs) Kind() string { return "sort" }
 
 // route sort jobs to the queue the worker listens on, regardless of which
-// client inserts them
+// client inserts them.
 func (SortArgs) InsertOpts() river.InsertOpts {
 	return river.InsertOpts{Queue: string(jobs.Slow)}
 }

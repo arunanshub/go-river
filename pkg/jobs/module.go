@@ -55,7 +55,11 @@ type ClientParams struct {
 	Registry *river.Workers
 }
 
-// This returns my client that is not generic
+type jobClient struct {
+	client *river.Client[pgx.Tx]
+}
+
+// This returns my client that is not generic.
 func NewJobClient(params ClientParams) (jobClient, error) {
 	client, err := river.NewClient(riverpgxv5.New(params.Pool), &river.Config{
 		Queues: map[string]river.QueueConfig{
@@ -70,10 +74,6 @@ func NewJobClient(params ClientParams) (jobClient, error) {
 	}
 
 	return jobClient{client}, err
-}
-
-type jobClient struct {
-	client *river.Client[pgx.Tx]
 }
 
 // A function that adds a worker to the registry. Workers are contributed to the
