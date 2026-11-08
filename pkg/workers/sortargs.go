@@ -17,7 +17,7 @@ type SortArgs struct {
 	Strings []string `json:"strings"`
 
 	// added new arg
-	WaitTime time.Duration
+	WaitTime time.Duration `json:"wait_time"`
 }
 
 func (SortArgs) Kind() string { return "sort" }

@@ -16,34 +16,36 @@ import (
 type clientCmd struct{}
 
 func (c clientCmd) Run(common sharedFlags) error {
+	var client *jobs.JobClient[workers.SortArgs]
 	app := fx.New(
 		workers.Module, jobs.Module, database.Module,
-		fx.Supply(database.DatabasePoolConfig{DatabaseURL: common.databaseURL}),
-		fx.Invoke(insertJob),
+		fx.Supply(database.DatabasePoolConfig{DatabaseURL: common.DatabaseURL}),
+		fx.Populate(&client),
 	)
 
+	// one-shot: insert once the app (and the pool) has started, then stop
 	return runApp(app, func() error {
-		<-app.Wait()
-		return nil
+		return insertJobs(client)
 	})
 }
 
-func insertJob(c *jobs.JobClient[workers.SortArgs], sd fx.Shutdowner) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+func insertJobs(c *jobs.JobClient[workers.SortArgs]) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	for i := range 230 {
-		row, err := c.Insert(ctx, workers.SortArgs{
+	args := make([]workers.SortArgs, 230)
+	for i := range args {
+		args[i] = workers.SortArgs{
 			Strings:  []string{"fefe", "fofo", strconv.Itoa(i)},
 			WaitTime: 5 * time.Second,
-		})
-		if err != nil {
-			return err
 		}
-
-		slog.InfoContext(ctx, "row", slog.Any("row", row))
 	}
 
-	// one-shot: exit once the job is inserted instead of blocking in Run
-	return sd.Shutdown()
+	rows, err := c.InsertMany(ctx, args)
+	if err != nil {
+		return err
+	}
+
+	slog.InfoContext(ctx, "inserted jobs", slog.Int("count", len(rows)))
+	return nil
 }

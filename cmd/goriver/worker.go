@@ -12,7 +12,7 @@ type workerCmd struct{}
 
 func (w workerCmd) Run(common sharedFlags) error {
 	app := fx.New(workers.Module, jobs.Module, database.Module,
-		fx.Supply(database.DatabasePoolConfig{DatabaseURL: common.databaseURL}),
+		fx.Supply(database.DatabasePoolConfig{DatabaseURL: common.DatabaseURL}),
 		fx.Invoke(jobs.StartClient),
 	)
 

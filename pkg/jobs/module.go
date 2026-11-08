@@ -11,15 +11,8 @@ import (
 	"go.uber.org/fx"
 )
 
-type QueueType string
-
-const (
-	Slow QueueType = "slow"
-	Fast QueueType = "fast"
-)
-
 var Module = fx.Module("jobs",
-	fx.Provide(NewJobClient, NewWorkersRegistry, NewInsertOnlyClient, NewQueueConfig),
+	fx.Provide(NewJobClient, NewWorkersRegistry, newInsertOnlyClient, NewQueueConfig),
 )
 
 func StartClient(lc fx.Lifecycle, client jobClient) {
@@ -48,12 +41,11 @@ type jobClient struct {
 	client *river.Client[pgx.Tx]
 }
 
-// This returns my client that is not generic.
+// NewJobClient builds the client that works jobs: it consumes the queues the
+// registered workers route to, using the full worker registry.
 func NewJobClient(params ClientParams) (jobClient, error) {
 	client, err := river.NewClient(riverpgxv5.New(params.Pool), &river.Config{
-		Queues: params.QueueConfig,
-		// so this is where the client gets to know about the workers
-		// but how do you run just one worker per process?
+		Queues:  params.QueueConfig,
 		Workers: params.Registry,
 	})
 	if err != nil {

@@ -3,23 +3,24 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"os"
 
 	"github.com/alecthomas/kong"
+	_ "github.com/joho/godotenv/autoload"
 	"go.uber.org/fx"
 )
 
 func main() {
 	if err := run(); err != nil {
+		slog.Error("command failed", slog.Any("error", err))
 		os.Exit(1)
 	}
 }
 
 // sharedFlags consists of anything common among commands.
 type sharedFlags struct {
-	databaseURL string `help:"The postgres database to connect to"`
+	DatabaseURL string `help:"The postgres database to connect to"`
 }
 
 type cli struct {
@@ -44,8 +45,7 @@ func run() error {
 	)
 
 	if err := kctx.Run(cli.sharedFlags); err != nil {
-		slog.Error("something happened", slog.Any("error", err))
-		return fmt.Errorf("command failed: %w", err)
+		return err
 	}
 
 	return nil

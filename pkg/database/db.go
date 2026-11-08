@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"os"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -17,19 +16,23 @@ type DatabasePoolConfig struct {
 
 func NewDatabasePool(lc fx.Lifecycle, params DatabasePoolConfig) (*pgxpool.Pool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	dbPool, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
+	defer cancel()
+
+	dbPool, err := pgxpool.New(ctx, params.DatabaseURL)
+	if err != nil {
+		return nil, err
+	}
 
 	lc.Append(
 		fx.Hook{
-			OnStop: func(ctx context.Context) error {
-				cancel()
-				dbPool.Close()
-				return nil
-			},
 			OnStart: func(ctx context.Context) error {
 				return dbPool.Ping(ctx)
 			},
+			OnStop: func(ctx context.Context) error {
+				dbPool.Close()
+				return nil
+			},
 		})
 
-	return dbPool, err
+	return dbPool, nil
 }
