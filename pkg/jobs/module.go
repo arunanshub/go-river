@@ -11,16 +11,6 @@ import (
 	"go.uber.org/fx"
 )
 
-type Queue struct {
-	name   string
-	config river.QueueConfig
-}
-
-var (
-	Slows = Queue{"slow", river.QueueConfig{MaxWorkers: 30}}
-	Fasts = Queue{"fast", river.QueueConfig{MaxWorkers: 100}}
-)
-
 type QueueType string
 
 const (
@@ -29,9 +19,7 @@ const (
 )
 
 var Module = fx.Module("jobs",
-	fx.Provide(NewJobClient, NewWorkersRegistry),
-	// fx.Invoke(StartClient),
-	// fx.Invoke(addWorkersToRegistry),
+	fx.Provide(NewJobClient, NewWorkersRegistry, NewInsertOnlyClient, NewQueueConfig),
 )
 
 func StartClient(lc fx.Lifecycle, client jobClient) {
@@ -50,7 +38,8 @@ func StartClient(lc fx.Lifecycle, client jobClient) {
 type ClientParams struct {
 	fx.In
 
-	Pool *pgxpool.Pool
+	Pool        *pgxpool.Pool
+	QueueConfig map[string]river.QueueConfig
 	// responsible for having the workers registered
 	Registry *river.Workers
 }
@@ -62,9 +51,7 @@ type jobClient struct {
 // This returns my client that is not generic.
 func NewJobClient(params ClientParams) (jobClient, error) {
 	client, err := river.NewClient(riverpgxv5.New(params.Pool), &river.Config{
-		Queues: map[string]river.QueueConfig{
-			string(Slow): {MaxWorkers: 100},
-		},
+		Queues: params.QueueConfig,
 		// so this is where the client gets to know about the workers
 		// but how do you run just one worker per process?
 		Workers: params.Registry,
@@ -74,44 +61,4 @@ func NewJobClient(params ClientParams) (jobClient, error) {
 	}
 
 	return jobClient{client}, err
-}
-
-// A function that adds a worker to the registry. Workers are contributed to the
-// "workers" value group as these closures since each river.Worker[T] is a
-// distinct type.
-type WorkerRegistration func(*river.Workers) error
-
-// Represents a worker that can be registered with [NewWorkersRegistry].
-type RegistrableWorker struct {
-	fx.Out
-
-	Registration WorkerRegistration `group:"workers"`
-}
-
-// Wraps worker as a [RegistrableWorker]. T is inferred from worker's Work
-// method, so callers never restate the args type.
-func AsWorker[T river.JobArgs](worker river.Worker[T]) RegistrableWorker {
-	return RegistrableWorker{
-		Registration: func(registry *river.Workers) error {
-			return river.AddWorkerSafely(registry, worker)
-		},
-	}
-}
-
-type registryParams struct {
-	fx.In
-
-	Registrations []WorkerRegistration `group:"workers"`
-}
-
-// Depending on the "workers" group forces every worker in it to be constructed
-// and registered before the client that depends on this registry is built.
-func NewWorkersRegistry(params registryParams) (*river.Workers, error) {
-	registry := river.NewWorkers()
-	for _, register := range params.Registrations {
-		if err := register(registry); err != nil {
-			return nil, err
-		}
-	}
-	return registry, nil
 }

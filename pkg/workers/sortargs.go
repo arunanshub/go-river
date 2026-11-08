@@ -2,11 +2,12 @@ package workers
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 	"sort"
 	"time"
 
 	"github.com/riverqueue/river"
+	"go.uber.org/fx"
 
 	"github.com/arunanshub/go-river/pkg/jobs"
 )
@@ -21,27 +22,27 @@ type SortArgs struct {
 
 func (SortArgs) Kind() string { return "sort" }
 
-// route sort jobs to the queue the worker listens on, regardless of which
-// client inserts them.
-func (SortArgs) InsertOpts() river.InsertOpts {
-	return river.InsertOpts{Queue: string(jobs.Slow)}
-}
-
 type SortWorker struct {
 	// An embedded WorkerDefaults sets up default methods to fulfill the rest of
 	// the Worker interface:
 	river.WorkerDefaults[SortArgs]
 }
 
-func (w *SortWorker) Work(ctx context.Context, job *river.Job[SortArgs]) error {
+func (w SortWorker) Work(ctx context.Context, job *river.Job[SortArgs]) error {
 	sort.Strings(job.Args.Strings)
 	time.Sleep(job.Args.WaitTime)
-	fmt.Printf("Sorted strings: %+v\n", job.Args.Strings)
+	slog.InfoContext(ctx, "sorted", slog.Any("args", job.Args))
 	return nil
 }
 
 var _ river.Worker[SortArgs] = (*SortWorker)(nil)
 
-func NewSortWorker() jobs.RegistrableWorker {
-	return jobs.AsWorker(&SortWorker{})
+type NewSortWorkerParams struct {
+	fx.In
 }
+
+func NewSortWorker(params NewSortWorkerParams) (river.Worker[SortArgs], error) {
+	return SortWorker{}, nil
+}
+
+var sortArgsModule = jobs.AsWorkerModule(jobs.FastQueue(), NewSortWorker)

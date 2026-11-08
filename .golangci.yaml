@@ -199,6 +199,8 @@ formatters:
     - golines
     - gci
     - goimports
+    - gofmt
+    - swaggo
 
   settings:
     golines:
