@@ -17,6 +17,10 @@ func Priority(p int) option {
 	return option{func(o *river.InsertOpts) { o.Priority = p }}
 }
 
+func Unique(u river.UniqueOpts) option {
+	return option{func(o *river.InsertOpts) { o.UniqueOpts = u }}
+}
+
 // A function that adds a worker to the registry. Workers are contributed to the
 // "workers" value group as these closures since each [river.Worker] is a
 // distinct type.

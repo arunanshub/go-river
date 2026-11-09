@@ -28,6 +28,7 @@ type cli struct {
 
 	Client clientCmd `cmd:"" help:"run the client"`
 	Worker workerCmd `cmd:"" help:"run the worker"`
+	User   userCmd   `cmd:"" help:"manage users"`
 }
 
 func run() error {
