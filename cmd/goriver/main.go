@@ -20,7 +20,7 @@ func main() {
 
 // sharedFlags consists of anything common among commands.
 type sharedFlags struct {
-	DatabaseURL string `help:"The postgres database to connect to"`
+	DatabaseURL string `help:"The postgres database to connect to. Must be an unpooled connection."`
 }
 
 type cli struct {
