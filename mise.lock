@@ -36,7 +36,7 @@ checksum = "sha256:178ab98950ac69ab25069307dc6ade79f3816e414cce95b4da166a115cde1
 url = "https://dl.google.com/go/go1.27.4.windows-amd64.zip"
 
 [[tools."go:github.com/riverqueue/river/cmd/river"]]
-version = "0.51.1"
+version = "0.51.2"
 backend = "go:github.com/riverqueue/river/cmd/river"
 specifiers = ["latest"]
 
