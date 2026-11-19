@@ -1,6 +1,6 @@
 [tools]
 golangci-lint = "latest"
-go = "1.27.3"
+go = "1.27.4"
 "go:github.com/riverqueue/river/cmd/river" = "latest"
 
 [settings]
