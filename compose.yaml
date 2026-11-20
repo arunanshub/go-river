@@ -2,7 +2,7 @@
 # production; postgres:5432 is the direct connection, for migrations and psql.
 services:
   postgres:
-    image: postgres:18.7-alpine
+    image: postgres:19.0-alpine
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
     environment:
       POSTGRES_USER: goriver
